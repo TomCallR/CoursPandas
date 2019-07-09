@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 import mysql.connector as sql
-from dateutil.relativedelta import relativedelta
-from datetime import date, datetime
+# from dateutil.relativedelta import relativedelta
+import datetime as dt
 from dfply import *
 
 #%%
@@ -18,7 +18,7 @@ ths = pd.read_sql('SELECT * FROM thesaurus', conn)
 
 #%% CHALLENGE N°1
 # Extraire la liste des patients qui avaient entre 20 et 70 ans à
-# l'admission et dont le 1er mouvement était aux urgences
+# l'admission
 patnotnone = (~pat['date_naissance'].isna())
 sejnotnone = (
     (~sej['patient_id'].isna())
@@ -54,26 +54,59 @@ patsej = patsej.query(
 )
 
 #%% CHALLENGE N°1 (suite)
-mvtnotnone = (
-    (~mvt['sejour_id'].isna())
-    & (~mvt['service_id'].isna())
+# ... et dont le 1er mouvement était aux urgences
+mvttodel = (
+    (mvt['date_entree'].isna()) &
+    (mvt['date_sortie'].isna())
 )
 
-srvmvt = pd.merge(
-    left=srv[srv['parent_id'] == 1],
-    right=mvt[mvtnotnone],
-    how='left',
-    left_on='id',
-    right_on='sejour_id'
-)
+sejtodel = (mvt[mvttodel].
+            groupby('sejour_id').
+            aggregate(
+                {'sejour_id': 'first'}
+            ))
 
-srvmvt.rename(
-    columns={
-        'id_x': 'id_service',
-        'id_y': 'id_mouvement'
-    },
-    inplace=True
-)
+mvt = mvt[~mvt['sejour_id'].isin(sejtodel)]
+
+datena = mvt['date_entree'].isna()
+mvt.loc[datena,'date_entree'] = mvt.loc[datena,'date_sortie'] - dt.timedelta(seconds=1)
+
+firstmvt = mvt.groupby(
+    'sejour_id'
+    ).aggregate(
+        {
+            'date_entree': 'min'
+        }
+    )
+
+
+
+# firstmvt = mvt.groupby('sejour_id').aggregate(
+#     {''}
+# )
+# srvmvt = pd.merge(
+#     left=srv[srv['parent_id'] == 1],
+#     right=mvt[mvtnotnone],
+#     how='left',
+#     left_on='id',
+#     right_on='sejour_id'
+# )
+
+# srvmvt.rename(
+#     columns={
+#         'id_x': 'id_service',
+#         'id_y': 'id_mouvement'
+#     },
+#     inplace=True
+# )
+
+
+
+
+
+
+
+
 
 # patsejmvt = pd.merge(
 #     left=patsej,
