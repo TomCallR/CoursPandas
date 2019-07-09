@@ -1,8 +1,9 @@
+#%% Start
 from dfply import *
 # pip install mysql-connector-python
 import mysql.connector as sql
 
-conn = sql.connect(host='localhost', database='cefim_datawarehouse', user='root', password='root')
+conn = sql.connect(host='da.cefim-formation.org', database='cefim_datawarehouse', user='root', password='dadfba16')
 
 pat = pd.read_sql('SELECT * FROM patient', conn)
 sej = pd.read_sql('SELECT * FROM sejour', conn)
@@ -89,3 +90,6 @@ id_patients = (srv >>
  distinct())
 
 pat >> mask(X.id.isin(id_patients))
+
+
+#%%

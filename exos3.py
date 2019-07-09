@@ -2,9 +2,9 @@
 import numpy as np
 import pandas as pd
 import mysql.connector as sql
-# from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta
 import datetime as dt
-from dfply import *
+# from dfply import *
 
 #%%
 conn = sql.connect(host='da.cefim-formation.org', database='cefim_datawarehouse', user='root', password='dadfba16')
@@ -71,89 +71,25 @@ mvt = mvt[~mvt['sejour_id'].isin(sejtodel)]
 datena = mvt['date_entree'].isna()
 mvt.loc[datena,'date_entree'] = mvt.loc[datena,'date_sortie'] - dt.timedelta(seconds=1)
 
+mvt.sort_values(by=['sejour_id', 'date_entree'])
+
 firstmvt = mvt.groupby(
     'sejour_id'
-    ).aggregate(
-        {
-            'date_entree': 'min'
-        }
-    )
+    ).first()
 
+id_srv_urgences = srv.query(
+    'parent_id == 1'
+)['id']
 
+firstmvt = firstmvt[firstmvt['service_id'].isin(id_srv_urgences)]
 
-# firstmvt = mvt.groupby('sejour_id').aggregate(
-#     {''}
-# )
-# srvmvt = pd.merge(
-#     left=srv[srv['parent_id'] == 1],
-#     right=mvt[mvtnotnone],
-#     how='left',
-#     left_on='id',
-#     right_on='sejour_id'
-# )
+patsej_res = patsej[patsej['id_sejour'].isin(
+    firstmvt.index
+)]
 
-# srvmvt.rename(
-#     columns={
-#         'id_x': 'id_service',
-#         'id_y': 'id_mouvement'
-#     },
-#     inplace=True
-# )
-
-
-
-
-
-
-
-
-
-# patsejmvt = pd.merge(
-#     left=patsej,
-#     right=mvt[mvtnotnone],
-#     how='left',
-#     left_on='id_sejour',
-#     right_on='id'
-# )
-
-
-
-# @dfpipe
-# def merge(
-#     df1: pd.DataFrame,
-#     df2: pd.DataFrame,
-#     how: str,
-#     left_on: str,
-#     right_on: str
-#     ):
-#     return pd.merge(
-#         left=df1,
-#         right=df2,
-#         how=how,
-#         left_on=left_on,
-#         right_on=right_on
-#     )
-# pat2 >>= merge(
-#         sej,
-#         how='inner',
-#         left_on='id',
-#         right_on='patient_id'
-#     )
-    
-# pat3 >>= mutate(
-#         age_admission=age_admission(
-#             X.date_entree,
-#             X.date_naissance
-#         )
-#     )
-    
-    # >> select(
-    #     20 <= X.age_admission <= 70
-    # ) >> select(
-
-    # )
-
-
+res = pat[pat['id'].isin(
+    patsej_res['id_patient']
+)]
 
 
 #%%
