@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import mysql.connector as sql
 from dateutil.relativedelta import relativedelta
-from datetime import date, datetime
-from dfply import *
+import datetime as dt
+# from dfply import *
 
 #%%
 conn = sql.connect(host='da.cefim-formation.org', database='cefim_datawarehouse', user='root', password='dadfba16')
@@ -18,7 +18,7 @@ ths = pd.read_sql('SELECT * FROM thesaurus', conn)
 
 #%% CHALLENGE N°1
 # Extraire la liste des patients qui avaient entre 20 et 70 ans à
-# l'admission et dont le 1er mouvement était aux urgences
+# l'admission
 patnotnone = (~pat['date_naissance'].isna())
 sejnotnone = (
     (~sej['patient_id'].isna())
@@ -54,73 +54,42 @@ patsej = patsej.query(
 )
 
 #%% CHALLENGE N°1 (suite)
-mvtnotnone = (
-    (~mvt['sejour_id'].isna())
-    & (~mvt['service_id'].isna())
+# ... et dont le 1er mouvement était aux urgences
+mvttodel = (
+    (mvt['date_entree'].isna()) &
+    (mvt['date_sortie'].isna())
 )
 
-srvmvt = pd.merge(
-    left=srv[srv['parent_id'] == 1],
-    right=mvt[mvtnotnone],
-    how='left',
-    left_on='id',
-    right_on='sejour_id'
-)
+sejtodel = (mvt[mvttodel].
+            groupby('sejour_id').
+            aggregate(
+                {'sejour_id': 'first'}
+            ))
 
-srvmvt.rename(
-    columns={
-        'id_x': 'id_service',
-        'id_y': 'id_mouvement'
-    },
-    inplace=True
-)
+mvt = mvt[~mvt['sejour_id'].isin(sejtodel)]
 
-# patsejmvt = pd.merge(
-#     left=patsej,
-#     right=mvt[mvtnotnone],
-#     how='left',
-#     left_on='id_sejour',
-#     right_on='id'
-# )
+datena = mvt['date_entree'].isna()
+mvt.loc[datena,'date_entree'] = mvt.loc[datena,'date_sortie'] - dt.timedelta(seconds=1)
 
+mvt.sort_values(by=['sejour_id', 'date_entree'])
 
+firstmvt = mvt.groupby(
+    'sejour_id'
+    ).first()
 
-# @dfpipe
-# def merge(
-#     df1: pd.DataFrame,
-#     df2: pd.DataFrame,
-#     how: str,
-#     left_on: str,
-#     right_on: str
-#     ):
-#     return pd.merge(
-#         left=df1,
-#         right=df2,
-#         how=how,
-#         left_on=left_on,
-#         right_on=right_on
-#     )
-# pat2 >>= merge(
-#         sej,
-#         how='inner',
-#         left_on='id',
-#         right_on='patient_id'
-#     )
-    
-# pat3 >>= mutate(
-#         age_admission=age_admission(
-#             X.date_entree,
-#             X.date_naissance
-#         )
-#     )
-    
-    # >> select(
-    #     20 <= X.age_admission <= 70
-    # ) >> select(
+id_srv_urgences = srv.query(
+    'parent_id == 1'
+)['id']
 
-    # )
+firstmvt = firstmvt[firstmvt['service_id'].isin(id_srv_urgences)]
 
+patsej_res = patsej[patsej['id_sejour'].isin(
+    firstmvt.index
+)]
 
+res = pat[pat['id'].isin(
+    patsej_res['id_patient']
+)]
 
 
 #%%
