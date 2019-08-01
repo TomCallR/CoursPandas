@@ -152,18 +152,70 @@ diags = (
 # Etape 4 : documents contenant les diagnostiques uniquement
 #%%
 docs_diag = (
-    doc >>
+    (
+        doc >> rename(
+            service_aval_id=X.service_id
+        )
+    ) >>
     mask(
         X.categorie_id == 5
     ) >>
     rename(
-        document_id='id'
+        document_id=X.id
     ) >>
+    inner_join(
+        diags,
+        by=[
+            'sejour_id',
+            'service_aval_id'
+            ]
+    )
+)
+
+#%% joindre avec les données d'analyse
+docs_diag_dat = (
+    docs_diag >> 
     inner_join(
         dat,
         by='document_id'
     )
 )
 
+#%% joindre avec le thesaurus (sera utile pour lire un code I50)
+docs_diag_dat_ths = (
+    (
+        docs_diag_dat >>
+        rename(
+            thesaurus_id=X.code_id
+        )
+    ) >>
+    inner_join(
+        (
+            ths >> rename(
+                thesaurus_id=X.id
+            )
+        ),
+        by='thesaurus_id'
+    )
+)
+
+#%% vérifier si le diagnostique après les urgences est
+# une cardiopathie
+docs_diag_dat_ths = (
+    docs_diag_dat_ths >>
+    mutate(
+        ica2=(
+            X.libelle.str.contains('I50')
+        )
+    )
+)
+
+#%% comparaison des deux diagnostiques (ica et ica2) :
+# matrice de confusion
+confusion = pd.crosstab(
+    docs_diag_dat_ths['ica'],
+    docs_diag_dat_ths['ica2']
+)
+confusion
 
 #%%

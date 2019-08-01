@@ -23,7 +23,7 @@ ths = pd.read_sql('SELECT * FROM thesaurus', conn)
     + coord_flip()
 )
 
-#%% Même chose mais avec représentation en porportion
+#%% Même chose mais avec représentation en proportion
 (
     ggplot(data=pat)
     + geom_bar(
@@ -73,12 +73,6 @@ patsej = (
         by='patient_id'
     )
 )
-# patsej = sej.merge(
-#     right=pat,
-#     how='inner',
-#     left_on='patient_id',
-#     right_on='id'
-# )
 
 (
     ggplot(data=patsej)
@@ -141,6 +135,128 @@ patsej = (
         ),
         fun_y=np.mean,
         geom='bar'
+    )
+)
+
+#%% représenter des boîtes à moustaches des résultats d'analyse
+# (une boîte pour chaque type d'analyse)
+# préalable
+datnotna = dat >> mask(
+    ~X.nombre.isna()
+    ) >> rename(
+        thesaurus_id=X.code_id
+)
+ths = ths >> rename(
+    thesaurus_id=X.id
+)
+exams = datnotna >> left_join(
+        ths,
+        by='thesaurus_id'
+    )
+
+#%% suite et fin
+(
+    ggplot(
+        data=exams,
+        mapping=aes(
+            x='libelle',
+            y='nombre')
+    )
+    + geom_boxplot(
+        group='thesaurus_id'
+    )
+    + theme(
+        axis_text_x=element_text(
+            angle=25,
+            hjust=1
+        )
+    )
+)
+
+#%% représenter les résultats d'hémoglobine par âge des patients
+# part 1
+import time
+from dateutil.relativedelta import relativedelta
+@make_symbolic
+def date_diff_annees(series1, series2):
+   df = pd.DataFrame({
+       's1': series1,
+       's2': series2
+   })
+   return df.apply(
+       lambda row:
+           relativedelta(row[0], row[1]).years, axis=1
+   )
+# 
+hemo_by_age = (
+    dat >> select(
+        ~X.texte
+    ) >> rename(
+        date_exam=X.date
+    ) >> mask(
+        X.code_id == 7,
+        ~X.date_exam.isna()
+    ) >> left_join(
+        (
+            doc >> select(
+                ~X.date,
+                ~X.texte,
+                ~X.titre
+            ) >> rename(
+                document_id=X.id
+            )
+        ),
+        by='document_id'
+    ) >> left_join(
+        (
+            pat >> rename(
+                patient_id=X.id
+            ) 
+        ),
+        by='patient_id'
+    ) >> mask(
+            ~X.date_naissance.isna()
+    )
+)
+
+#%% part 2 : premier graphique
+hemo_by_age = (
+    hemo_by_age >> mutate(
+        age=date_diff_annees(X.date_exam, X.date_naissance)
+    )
+)
+#
+(
+    ggplot(
+        data=hemo_by_age,
+        mapping=aes(
+            x='age',
+            y='nombre'
+        ))
+    + geom_point(
+        alpha=0.3,
+        size=4
+    )
+)
+
+#%% part 3 : graphique alternatif, plus parlant
+hemo_by_age = (
+    hemo_by_age >> group_by(
+        X.age, X.nombre
+    ) >> summarize(
+        size=n(X.patient_id)
+    )
+)
+#
+(
+    ggplot(
+        data=hemo_by_age,
+        mapping=aes(
+            x='age',
+            y='nombre',
+            size='size'
+        ))
+    + geom_point(
     )
 )
 

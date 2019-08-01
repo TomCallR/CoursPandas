@@ -196,4 +196,148 @@ data_4 = (
     + geom_bar(mapping=aes(x='cut', fill='clarity'),
     position='fill')
 )
+
+#%% geom boxplot
+bar = (
+    ggplot(data=mpg)
+    + geom_boxplot(
+        mapping=aes(
+            x='class',
+            y='hwy'
+        )
+    )
+)
+bar
+
+#%% retournée
+bar + coord_flip()
+
+#%% coord cartésiennes vs polaires
+bar = (
+    ggplot(data=diamonds)
+    + geom_bar(
+        mapping=aes(
+            x='cut',
+            fill='cut'
+        ),
+        width=1
+    )
+)
+bar
+
+#%% labels : affichage des textes principaux
+graph = (
+    ggplot(
+        data=mpg,
+        mapping=aes(
+        'displ', 'hwy'
+    ))
+    + geom_point(
+        mapping=aes(
+            color='class'
+        )
+    )
+    + geom_smooth(
+        se=False
+    )
+    + labs(
+        title="Fuel efficiency",
+        subtitle='Two seaters',
+        caption='Data from ....'
+    )
+)
+graph
+
+#%% modifier la légende
+(
+    ggplot(
+        data=mpg,
+        mapping=aes(
+        'displ', 'hwy'
+    ))
+    + geom_point(
+        mapping=aes(
+            color='class'
+        )
+    )
+    + geom_smooth(
+        se=False
+    )
+    + labs(
+        color='Car type'
+    )
+)
+
+#%% ajout étiquettes
+(
+    ggplot(
+        data=mpg,
+        mapping=aes(
+            x='displ',
+            y='hwy'
+        )
+    )
+    + geom_point(
+        mapping=aes(
+            color='class'
+        )
+    )
+    + geom_text(
+        mapping=aes(
+            label='displ'
+        )
+    )
+)
+
+
+#%% sur le graphique précédent, afficher pour chaque class
+# la voiture ayant le meilleur hwy
+(
+    ggplot(
+        data=mpg,
+        mapping=aes(
+            x='displ',
+            y='hwy'
+        )
+    )
+    + geom_point(
+        mapping=aes(
+            color='class'
+        )
+    )
+    + geom_text(
+        mapping=aes(
+            label='class'
+        )
+    )
+)
+
+#%%
+best_in_class = (
+    mpg >>
+    group_by(X['class']) >>
+    mask(X.hwy == np.max(X.hwy))
+)
+(
+    ggplot(
+        data=mpg,
+        mapping=aes(
+            x='displ',
+            y='hwy'
+        )
+    )
+    + geom_point(
+        mapping=aes(
+            color='class'
+        )
+    )
+    + geom_text(
+        mapping=aes(
+            label='model'
+        ),
+        data=best_in_class,
+        nudge_y=2
+    )
+)
+
 #%%
